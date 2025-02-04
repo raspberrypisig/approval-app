@@ -1,5 +1,59 @@
 from nicegui import ui
 
+from pathlib import Path
+from datetime import datetime
+
+def list_upload_files_with_metadata(directory='uploads'):
+    """
+    Lists all files in the specified directory along with their last modified date (non-recursive).
+
+    Args:
+        directory (str): The directory to list files from. Default is 'uploads'.
+
+    Returns:
+        list: A list of dictionaries containing 'filename' and 'date_modified'.
+    """
+    # Create a Path object for the given directory
+    dir_path = Path(directory)
+
+    # Check if the directory exists
+    if not dir_path.exists():
+        raise FileNotFoundError(f"The directory '{directory}' does not exist.")
+    
+    if not dir_path.is_dir():
+        raise NotADirectoryError(f"'{directory}' is not a directory.")
+
+    # List only files in the top-level directory (non-recursive)
+    files_with_metadata = []
+    for file in dir_path.iterdir():
+        if file.is_file():
+            # Get the last modified time and convert it to a readable format
+            modified_time = file.stat().st_mtime  # Last modified time in seconds since epoch
+            modified_date = datetime.fromtimestamp(modified_time)
+            
+            # Format the date and time
+            day = modified_date.strftime('%d').lstrip('0')  # Remove leading zero from day
+            month = modified_date.strftime('%m').lstrip('0')  # Remove leading zero from month
+            year = modified_date.strftime('%Y')
+            hour = modified_date.strftime('%I').lstrip('0')  # Remove leading zero from hour
+            minute = modified_date.strftime('%M')
+            am_pm = modified_date.strftime('%p')
+            
+            # Construct the formatted date string
+            modified_date = f"{day}/{month}/{year} {hour}:{minute} {am_pm}"
+            
+            # Append the filename and modified date as a dictionary
+            files_with_metadata.append({
+                'filename': str(file.name),  # Just the file name (not full path)
+                'date': modified_date
+            })
+
+    return files_with_metadata
+
+# Function to handle approve button clicks
+def on_approve(filename):
+    ui.notify(f"Approved: {filename}")
+
 # Create a row to hold the heading and hyperlinks
 with ui.row().classes('w-full items-center'):  # Full-width row, vertically aligned items
     # Left-justified heading
@@ -10,15 +64,8 @@ with ui.row().classes('w-full items-center'):  # Full-width row, vertically alig
         ui.link('View Records', '/').classes('text-blue-600 hover:underline')  # Points to "/"
         ui.link('Approval History', '/history').classes('text-blue-600 hover:underline')  # Points to "/history"
 
-# Define table data
-table_data = [
-    {"filename": "document1.pdf", "date": "2023-10-01"},
-    {"filename": "report2.xlsx", "date": "2023-10-05"},
-]
+table_data = list_upload_files_with_metadata()
 
-# Function to handle approve button clicks
-def on_approve(filename):
-    ui.notify(f"Approved: {filename}")
 
 # Base URL for file downloads
 BASE_URL = "http://localhost:8000/uploads/"
